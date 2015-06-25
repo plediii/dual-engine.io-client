@@ -23,7 +23,7 @@
   "homepage": "https://github.com/plediii/dual-engine.io-client.git",
   "devDependencies": {
     "bluebird": "^2.9.30",
-    "dual-protocol": "^0.2.2",
+    "dualapi": "^1.0.0",
     "istanbul": "^0.3.14",
     "lodash": "^3.9.3",
     "mocha": "^1.21.4",

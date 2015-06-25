@@ -62,8 +62,10 @@ module.exports = function (behavior) {
     var listenEmitter = new EventEmitter();
 
     return {
-        connect: function () {
+        connect: function (url) {
             var s = socket();
+            s.sideA.url = url;
+            s.sideB.url = url;
             setTimeout(function () {
                 listenEmitter.emit('connect', s.sideA);
                 if (behavior) {

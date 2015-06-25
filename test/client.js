@@ -5,14 +5,15 @@ var Promise = require('bluebird');
 var _ = require('lodash');
 var assert = require('assert');
 
-var dualproto = require('dual-protocol');
-var io = require('./mock-io');
+var dapi = require('dualapi');
+var mockio = require('./mock-io');
 
 describe('dual socket.io client', function () {
 
-    var d, socket;
+    var d, socket, io;
     beforeEach(function () {
-        d = dualproto.use(require('../index'))();
+        d = dapi.use(require('../index'))();
+        io = mockio();
         socket = io.socket();
     });
     
@@ -24,7 +25,7 @@ describe('dual socket.io client', function () {
                 assert.equal(socket.url, url);
                 done();
             });
-            d.engineio.connect(io, ['server'], url);
+            d.engineio(io, ['server'], url);
         });
 
     });
@@ -37,7 +38,7 @@ describe('dual socket.io client', function () {
                 authEmitted = true;
                 socket.emit('dual-auth');
             });
-            d.engineio.connect(io, dual, ['server'], function () {
+            d.engineio(io, ['server'], function () {
                 assert(authEmitted);
                 done();
             });
@@ -46,7 +47,7 @@ describe('dual socket.io client', function () {
         it('should *not* be called if the  server does not emit auth', function (done) {
             var authEmitted = false;
             io.listen().on('connect', function (socket) {});
-            d.engineio.connect(io, dual, ['server'], function () {
+            d.engineio(io, ['server'], function () {
                 done('no auth requested');
             });
             done();
@@ -61,7 +62,7 @@ describe('dual socket.io client', function () {
                 });
                 socket.emit('dual-auth');
             });
-            d.engineio.connect(io, dual, ['server'], function () {
+            d.engineio(io, ['server'], function () {
                 return Promise.resolve('oompa');
             });
         });
@@ -74,7 +75,7 @@ describe('dual socket.io client', function () {
                 });
                 socket.emit('dual-auth');
             });
-            d.engineio.connect(io, dual, ['server'], function () {
+            d.engineio(io, ['server'], function () {
                 return 'oompa';
             });
         });
@@ -83,7 +84,7 @@ describe('dual socket.io client', function () {
             io.listen().on('connect', function (socket) {
                 socket.emit('dual-auth', 'bighead');
             });
-            d.engineio.connect(io, dual, ['server'], function (msg) {
+            d.engineio(io, ['server'], function (msg) {
                 assert.equal(msg, 'bighead');
                 done();
             });
@@ -93,12 +94,13 @@ describe('dual socket.io client', function () {
 
     describe('authenticated', function () {
 
+        var serverSocket;
         beforeEach(function (done) {
             io.listen().on('connect', function (socket) {
                 serverSocket = socket;
                 done();
             });
-            d.engineio.connect(io, dual, ['server']);
+            d.engineio(io, ['server']);
         });
 
         describe('connect', function () {
@@ -112,7 +114,7 @@ describe('dual socket.io client', function () {
                 });
             });
 
-            it('should be emitted to connect/engineio/server/** when server emits index', function (done) {
+            it('should be emitted to connect/server/** when server emits index', function (done) {
                 d.mount(['connect', 'server', 'fair'], function () {
                     done();
                 });
@@ -123,7 +125,7 @@ describe('dual socket.io client', function () {
 
             it('should not be emitted before server emits index', function (done) {
                 var indexEmitted = false;
-                d.mount(['connect', 'enginio', 'server'], function () {
+                d.mount(['connect', 'server'], function () {
                     assert(indexEmitted);
                     done();
                 });
@@ -164,7 +166,7 @@ describe('dual socket.io client', function () {
 
                 describe('server', function () {
                     it('should respond unavailable', function (done) {
-                        serverSocket.emit('disconnect');
+                        serverSocket.disconnect();
                         d.request(['server'])
                             .spread(function (body, options) {
                                 assert.equal(options.statusCode, 503);
@@ -208,11 +210,11 @@ describe('dual socket.io client', function () {
                 });
 
                 it('should be transmitted from client to server', function (done) {
-                    serverSocket.on('dual', function (body, ctxt) {
-                        assert.deepEqual(ctxt.to, ['decides']);
-                        assert.deepEqual(ctxt.from, ['you', 'did']);
-                        assert.equal(ctxt.body.yeah, 'or');
-                        assert.equal(ctxt.options.how, 'specifically');
+                    serverSocket.on('dual', function (msg) {
+                        assert.deepEqual(msg.to, ['decides']);
+                        assert.deepEqual(msg.from, ['you', 'did']);
+                        assert.equal(msg.body.yeah, 'or');
+                        assert.equal(msg.options.how, 'specifically');
                         done();
                     });
                     d.send(['server', 'decides'], ['you', 'did'], { yeah: 'or'}, { how: 'specifically' });
