@@ -123,9 +123,19 @@ describe('dual socket.io client', function () {
             //     });
             // });
 
+            it('should be mounted when connect is emitted', function (done) {
+                d.mount(['connect', 'server'], function () {
+                    assert(d.send(['server']));
+                    done();
+                });
+                serverSocket.emit('dual', {
+                    to: ['index']
+                });
+            });
+
             it('should not be emitted before server emits index', function (done) {
                 var indexEmitted = false;
-                d.mount(['connect', 'server'], function () {
+                d.mount(['**'], function () {
                     assert(indexEmitted);
                     done();
                 });
