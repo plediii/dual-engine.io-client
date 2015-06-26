@@ -20,9 +20,6 @@ var mount = function (d, point, socket) {
     d.mount(point, function (body, ctxt) {
         ctxt.return(true, { statusCode: 200 });
     });
-    d.send({
-        to: ['connect'].concat(point)
-    });
     socket.on('disconnect', function () {
         makeUnavailable(d, point);
         d.send({
@@ -51,6 +48,9 @@ var mount = function (d, point, socket) {
     });
     d.mount(['error'], function (body, ctxt) {
         socket.emit('dual', ctxt.toJSON());
+    });
+    d.send({
+        to: ['connect'].concat(point)
     });
 };
 

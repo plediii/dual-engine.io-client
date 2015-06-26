@@ -133,7 +133,7 @@ describe('dual socket.io client', function () {
                 });
             });
 
-            it('should not be emitted before server emits index', function (done) {
+            it('should not allow events (except redirect) from server before index', function (done) {
                 var indexEmitted = false;
                 d.mount(['**'], function () {
                     assert(indexEmitted);
@@ -150,15 +150,56 @@ describe('dual socket.io client', function () {
                 }, 100);
             });
 
+            it('should mount server status code on connect', function (done) {
+                var indexEmitted = false;
+                d.mount(['status'], function (body, ctxt) {
+                    assert.equal(200, ctxt.options.statusCode);
+                    done();
+                });
+                d.mount(['connect', 'server'], function () {
+                    d.send(['server'], ['status']);
+                });
+                serverSocket.emit('dual', {
+                    to: ['index']
+                });
+            });
+
+            it('should send messages immediately on connect', function (done) {
+                var indexEmitted = false;
+                d.mount(['connect', 'server'], function () {
+                    d.send(['server', 'piper']);
+                });
+                serverSocket.on('dual', function () {
+                    done();
+                });
+                serverSocket.emit('dual', {
+                    to: ['index']
+                });
+            });
+
+            it('should forward errors immediately on connect', function (done) {
+                var indexEmitted = false;
+                d.mount(['error'], function () {});
+                d.mount(['connect', 'server'], function () {
+                    d.send(['error', 'piper']);
+                });
+                serverSocket.on('dual', function () {
+                    done();
+                });
+                serverSocket.emit('dual', {
+                    to: ['index']
+                });
+            });
+
+
         });
 
         describe('connected', function () {
 
             beforeEach(function (done) {
-                d.waitFor(['connect', 'server'])
-                    .then(function () {
-                        done();
-                    });
+                d.once(['connect', 'server'], function () {
+                    done();
+                });
                 serverSocket.emit('dual', {
                     to: ['index']
                 });
