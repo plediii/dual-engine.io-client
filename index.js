@@ -45,9 +45,21 @@ module.exports = function(Domain) {
             });
         };
 
+        var handleDisconnect = function () {
+            makeUnavailable();
+            d.send({
+                to: ['disconnect'].concat(point)
+            });
+            d.send({
+                to: ['disconnect'].concat(point).concat('**')
+            });
+            waitForIndex(d, point, socket);
+        };
+
         var makeUnavailable = function () {
             console.log(point.join('/') + ' is unavailable');
             socket.removeListener('dual', toServer);
+            socket.removeListener('disconnect', handleDisconnect);
             d.unmount(point);
             d.mount(point, function (body, ctxt) {
                 ctxt.return(false, { statusCode: 503 });
@@ -60,16 +72,7 @@ module.exports = function(Domain) {
             d.mount(point, function (body, ctxt) {
                 ctxt.return(true, { statusCode: 200 });
             });
-            socket.on('disconnect', function () {
-                makeUnavailable();
-                d.send({
-                    to: ['disconnect'].concat(point)
-                });
-                d.send({
-                    to: ['disconnect'].concat(point).concat('**')
-                });
-                waitForIndex(d, point, socket);
-            });
+            socket.on('disconnect', handleDisconnect);
             socket.on('dual', toServer);
             d.mount(point.concat('::serverRoute'), function (body, ctxt) {
                 socket.emit('dual', {

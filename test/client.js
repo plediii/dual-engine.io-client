@@ -235,22 +235,11 @@ describe('dual socket.io client', function () {
                 });
 
                 describe('then reconnect', function () {
-                    it('should not double transmit messages', function (done) {
+
+                    beforeEach(function (done) {
                         d.waitFor(['connect', 'server'])
                             .then(function () {
-                                console.log('on connect');
-                                var count = 0;
-                                d.mount(['means'], function (body, ctxt) {
-                                    count++;
-                                    if (count > 1) {
-                                        done('multiple calls');
-                                    } else {
-                                        done();
-                                    }
-                                });
-                                serverSocket.emit('dual', {
-                                    to: ['means']
-                                });
+                                done();
                             });
                         console.log('emitting connect');
                         serverSocket.disconnect();
@@ -259,6 +248,37 @@ describe('dual socket.io client', function () {
                             to: ['index']
                         });
                     });
+
+                    it('should not double transmit messages', function (done) {
+                        var count = 0;
+                        d.mount(['means'], function (body, ctxt) {
+                            count++;
+                            if (count > 1) {
+                                done('multiple calls');
+                            } else {
+                                done();
+                            }
+                        });
+                        serverSocket.emit('dual', {
+                            to: ['means']
+                        });
+                    });
+
+                    describe('the disconnect again', function () {
+                        it('should not double transmit disconnect', function (done) {
+                            var count = 0;
+                            d.mount(['disconnect', 'server'], function (body, ctxt) {
+                                count++;
+                                if (count > 1) {
+                                    done('multiple calls');
+                                } else {
+                                    done();
+                                }
+                            });
+                            serverSocket.disconnect();
+                        });
+                    });
+
                 });
 
             });
