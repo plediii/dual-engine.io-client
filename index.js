@@ -14,7 +14,6 @@ module.exports = function(Domain) {
             url = false;
         }
         var socket;
-        console.log('connecting');
         if (url) {
             socket = io.connect(url);
         } else {

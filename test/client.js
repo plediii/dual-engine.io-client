@@ -241,7 +241,6 @@ describe('dual socket.io client', function () {
                             .then(function () {
                                 done();
                             });
-                        console.log('emitting connect');
                         serverSocket.disconnect();
                         serverSocket.reconnect();
                         serverSocket.emit('dual', {
