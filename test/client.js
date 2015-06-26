@@ -232,6 +232,15 @@ describe('dual socket.io client', function () {
                                 done();
                             });
                     });
+
+                    it('should respond unavailable on subroutes', function (done) {
+                        serverSocket.disconnect();
+                        d.request(['server', 'ferrets'])
+                            .spread(function (body, options) {
+                                assert.equal(options.statusCode, 503);
+                                done();
+                            });
+                    });
                 });
 
                 describe('then reconnect', function () {
