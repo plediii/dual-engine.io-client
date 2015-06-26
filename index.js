@@ -94,7 +94,7 @@ module.exports = function(Domain) {
                 };
 
                 var async = auth(challenge);
-                if (isFunction(async.then)) {
+                if (async && isFunction(async.then)) {
                     async.then(goAuth);
                 } else {
                     goAuth(async);
