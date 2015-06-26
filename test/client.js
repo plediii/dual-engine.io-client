@@ -212,7 +212,7 @@ describe('dual socket.io client', function () {
                         .then(function () {
                             done();
                         });
-                    serverSocket.emit('disconnect');
+                    serverSocket.disconnect();
                 });
 
                 it('should be emitted to disconnect/server/**', function (done) {
@@ -220,7 +220,7 @@ describe('dual socket.io client', function () {
                         .then(function () {
                             done();
                         });
-                    serverSocket.emit('disconnect');
+                    serverSocket.disconnect();
                 });
 
                 describe('server', function () {
@@ -231,6 +231,33 @@ describe('dual socket.io client', function () {
                                 assert.equal(options.statusCode, 503);
                                 done();
                             });
+                    });
+                });
+
+                describe('then reconnect', function () {
+                    it('should not double transmit messages', function (done) {
+                        d.waitFor(['connect', 'server'])
+                            .then(function () {
+                                console.log('on connect');
+                                var count = 0;
+                                d.mount(['means'], function (body, ctxt) {
+                                    count++;
+                                    if (count > 1) {
+                                        done('multiple calls');
+                                    } else {
+                                        done();
+                                    }
+                                });
+                                serverSocket.emit('dual', {
+                                    to: ['means']
+                                });
+                            });
+                        console.log('emitting connect');
+                        serverSocket.disconnect();
+                        serverSocket.reconnect();
+                        serverSocket.emit('dual', {
+                            to: ['index']
+                        });
                     });
                 });
 

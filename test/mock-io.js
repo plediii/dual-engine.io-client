@@ -19,6 +19,15 @@ var socket = function () {
             sideAemit.call(sideA, 'disconnect');
         }
     };
+
+    var socketReconnect = function () {
+        if (!connected) { 
+            connected = true;
+            sideBemit.call(sideB, 'connect');
+            sideAemit.call(sideA, 'connect');
+        }
+    };
+
     
     _.extend(sideA, {
         emit: function () {
@@ -27,6 +36,7 @@ var socket = function () {
             }
         }
         , disconnect: socketDisconnect
+        , reconnect: socketReconnect
     });
 
     _.extend(sideB, {
@@ -36,6 +46,7 @@ var socket = function () {
             }
         }
         , disconnect: socketDisconnect
+        , reconnect: socketReconnect
     });
 
     return {
