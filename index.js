@@ -60,6 +60,14 @@ var waitForIndex = function (d, point, socket) {
             && msg.to.length === 1) {
             socket.removeListener('dual', indexListener);
             mount(d, point, socket);
+        } else if (msg.to[0] == 'redirect' 
+                  && msg.to.length === 1) {
+            d.send({
+                to: ['redirect']
+                , from: point
+                , body: msg.body
+                , options: msg.options
+            });
         }
     };
     socket.on('dual', indexListener);
@@ -93,6 +101,7 @@ module.exports = function(Domain) {
                 }
             });
         }
+
         makeUnavailable(d, point);
         waitForIndex(d, point, socket);
     };
