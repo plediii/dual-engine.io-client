@@ -114,14 +114,14 @@ describe('dual socket.io client', function () {
                 });
             });
 
-            it('should be emitted to connect/server/** when server emits index', function (done) {
-                d.mount(['connect', 'server', 'fair'], function () {
-                    done();
-                });
-                serverSocket.emit('dual', {
-                    to: ['index']
-                });
-            });
+            // it('should be emitted to connect/server/** when server emits index', function (done) {
+            //     d.mount(['connect', 'server', 'fair'], function () {
+            //         done();
+            //     });
+            //     serverSocket.emit('dual', {
+            //         to: ['index']
+            //     });
+            // });
 
             it('should not be emitted before server emits index', function (done) {
                 var indexEmitted = false;
@@ -158,6 +158,14 @@ describe('dual socket.io client', function () {
                 
                 it('should be emitted when the socket disconnects', function (done) {
                     d.waitFor(['disconnect', 'server'])
+                        .then(function () {
+                            done();
+                        });
+                    serverSocket.emit('disconnect');
+                });
+
+                it('should be emitted to disconnect/server/**', function (done) {
+                    d.waitFor(['disconnect', 'server', 'sub', 'host'])
                         .then(function () {
                             done();
                         });

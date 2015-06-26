@@ -23,13 +23,13 @@ var mount = function (d, point, socket) {
     d.send({
         to: ['connect'].concat(point)
     });
-    d.send({
-        to: ['connect'].concat(point).concat('**')
-    });
     socket.on('disconnect', function () {
         makeUnavailable(d, point);
         d.send({
             to: ['disconnect'].concat(point)
+        });
+        d.send({
+            to: ['disconnect'].concat(point).concat('**')
         });
         waitForIndex(d, point, socket);
     });
