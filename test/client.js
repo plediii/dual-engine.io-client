@@ -10,10 +10,11 @@ var mockio = require('./mock-io');
 
 describe('dual socket.io client', function () {
 
-    var d, socket, io;
+    var d, socket, io, ioclient;
     beforeEach(function () {
         d = dapi.use(require('../index'))();
         io = mockio();
+        ioclient = io.client;
         socket = io.socket();
     });
     
@@ -21,11 +22,11 @@ describe('dual socket.io client', function () {
 
         it('should connect to the specified url', function (done) {
             var url = 'http://boondocks.com';
-            io.listen().on('connect', function (socket) {
+            io.listen().on('connection', function (socket) {
                 assert.equal(socket.url, url);
                 done();
             });
-            d.engineio(io, ['server'], url);
+            d.engineio(ioclient, ['server'], url);
         });
 
     });
@@ -34,11 +35,11 @@ describe('dual socket.io client', function () {
 
         it('should be called when server emits auth', function (done) {
             var authEmitted = false;
-            io.listen().on('connect', function (socket) {
+            io.listen().on('connection', function (socket) {
                 authEmitted = true;
-                socket.emit('dual-auth');
+                socket.send('dual-auth');
             });
-            d.engineio(io, ['server'], function () {
+            d.engineio(ioclient, ['server'], function () {
                 assert(authEmitted);
                 done();
             });
@@ -46,8 +47,8 @@ describe('dual socket.io client', function () {
 
         it('should *not* be called if the  server does not emit auth', function (done) {
             var authEmitted = false;
-            io.listen().on('connect', function (socket) {});
-            d.engineio(io, ['server'], function () {
+            io.listen().on('connection', function (socket) {});
+            d.engineio(ioclient, ['server'], function () {
                 done('no auth requested');
             });
             done();
@@ -55,36 +56,36 @@ describe('dual socket.io client', function () {
 
 
         it('should return the resolved response ', function (done) {
-            io.listen().on('connect', function (socket) {
-                socket.on('dual-auth', function (msg) {
+            io.listen().on('connection', function (socket) {
+                socket.on('message', function (msg) {
                     assert.equal(msg, 'oompa');
                     done();
                 });
-                socket.emit('dual-auth');
+                socket.send('dual-auth');
             });
-            d.engineio(io, ['server'], function () {
+            d.engineio(ioclient, ['server'], function () {
                 return Promise.resolve('oompa');
             });
         });
 
         it('should allow synchronous response ', function (done) {
-            io.listen().on('connect', function (socket) {
-                socket.on('dual-auth', function (msg) {
+            io.listen().on('connection', function (socket) {
+                socket.on('message', function (msg) {
                     assert.equal(msg, 'oompa');
                     done();
                 });
-                socket.emit('dual-auth');
+                socket.send('dual-auth');
             });
-            d.engineio(io, ['server'], function () {
+            d.engineio(ioclient, ['server'], function () {
                 return 'oompa';
             });
         });
 
         it('should transmit auth message from server ', function (done) {
-            io.listen().on('connect', function (socket) {
-                socket.emit('dual-auth', 'bighead');
+            io.listen().on('connection', function (socket) {
+                socket.send('bighead');
             });
-            d.engineio(io, ['server'], function (msg) {
+            d.engineio(ioclient, ['server'], function (msg) {
                 assert.equal(msg, 'bighead');
                 done();
             });
@@ -96,22 +97,22 @@ describe('dual socket.io client', function () {
 
         var serverSocket;
         beforeEach(function (done) {
-            io.listen().on('connect', function (socket) {
+            io.listen().on('connection', function (socket) {
                 serverSocket = socket;
                 done();
             });
-            d.engineio(io, ['server']);
+            d.engineio(ioclient, ['server']);
         });
 
-        describe('connect', function () {
+        describe('connection', function () {
 
             it('should be emitted when server emits index', function (done) {
                 d.mount(['connect', 'server'], function () {
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['index']
-                });
+                }));
             });
 
             // it('should be emitted to connect/server/** when server emits index', function (done) {
@@ -128,9 +129,9 @@ describe('dual socket.io client', function () {
                     assert(d.send(['server']));
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['index']
-                });
+                }));
             });
 
             it('should not allow events (except redirect) from server before index', function (done) {
@@ -139,14 +140,14 @@ describe('dual socket.io client', function () {
                     assert(indexEmitted);
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['you']
-                });
+                }));
                 setTimeout(function () {
                     indexEmitted = true;
-                    serverSocket.emit('dual', {
+                    serverSocket.send(JSON.stringify({
                         to: ['index']
-                    });
+                    }));
                 }, 100);
             });
 
@@ -159,9 +160,9 @@ describe('dual socket.io client', function () {
                 d.mount(['connect', 'server'], function () {
                     d.send(['server'], ['status']);
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['index']
-                });
+                }));
             });
 
             it('should send messages immediately on connect', function (done) {
@@ -169,12 +170,12 @@ describe('dual socket.io client', function () {
                 d.mount(['connect', 'server'], function () {
                     d.send(['server', 'piper']);
                 });
-                serverSocket.on('dual', function () {
+                serverSocket.on('message', function () {
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['index']
-                });
+                }));
             });
 
             it('should forward errors immediately on connect', function (done) {
@@ -183,12 +184,12 @@ describe('dual socket.io client', function () {
                 d.mount(['connect', 'server'], function () {
                     d.send(['error', 'piper']);
                 });
-                serverSocket.on('dual', function () {
+                serverSocket.on('message', function () {
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['index']
-                });
+                }));
             });
 
 
@@ -200,9 +201,72 @@ describe('dual socket.io client', function () {
                 d.once(['connect', 'server'], function () {
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['index']
+                }));
+            });
+
+            describe('server', function () {
+                it('should respond true', function (done) {
+                    d.request(['server'])
+                        .spread(function (body, options) {
+                            assert.equal(body, true);
+                            assert.equal(options.statusCode, 200);
+                            done();
+                        });
                 });
+            });
+
+            describe('messages', function () {
+
+                it('should be transmitted from server to client', function (done) {
+                    d.mount(['means'], function (body, ctxt) {
+                        console.log('means received');
+                        assert.deepEqual(ctxt.from, ['server', 'decides']);
+                        assert.equal(ctxt.body.him, 'or');
+                        assert.equal(ctxt.options.how, 'specifically');
+                        done();
+                    });
+                    serverSocket.send(JSON.stringify({
+                        to: ['means']
+                        , from: ['decides']
+                        , body: {
+                            him: 'or'
+                        }
+                        ,options: {
+                            how: 'specifically'
+                        }
+                    }));
+                });
+
+                it('should be transmitted from client to server', function (done) {
+                    serverSocket.on('message', function (raw) {
+                        var msg = JSON.parse(raw);
+                        assert.deepEqual(msg.to, ['decides']);
+                        assert.deepEqual(msg.from, ['you', 'did']);
+                        assert.equal(msg.body.yeah, 'or');
+                        assert.equal(msg.options.how, 'specifically');
+                        done();
+                    });
+                    d.send(['server', 'decides'], ['you', 'did'], { yeah: 'or'}, { how: 'specifically' });
+                });
+
+            });
+
+            describe('error events', function () {
+
+                it('should be transmitted to server', function (done) {
+                    serverSocket.on('message', function (raw) {
+                        var ctxt = JSON.parse(raw);
+                        assert.deepEqual(ctxt.to, ['error']);
+                        assert.deepEqual(ctxt.from, ['you', 'did']);
+                        assert.equal(ctxt.body.up, 'down');
+                        assert.equal(ctxt.options.how, 'specifically');
+                        done();
+                    });
+                    d.send(['error'], ['you', 'did'], { up: 'down'}, { how: 'specifically' });
+                });
+                
             });
 
             describe('disconnect', function () {
@@ -252,9 +316,9 @@ describe('dual socket.io client', function () {
                             });
                         serverSocket.disconnect();
                         serverSocket.reconnect();
-                        serverSocket.emit('dual', {
+                        serverSocket.send(JSON.stringify({
                             to: ['index']
-                        });
+                        }));
                     });
 
                     it('should not double transmit messages', function (done) {
@@ -267,9 +331,9 @@ describe('dual socket.io client', function () {
                                 done();
                             }
                         });
-                        serverSocket.emit('dual', {
+                        serverSocket.send(JSON.stringify({
                             to: ['means']
-                        });
+                        }));
                     });
 
                     describe('the disconnect again', function () {
@@ -291,66 +355,6 @@ describe('dual socket.io client', function () {
 
             });
 
-            describe('server', function () {
-                it('should respond true', function (done) {
-                    d.request(['server'])
-                        .spread(function (body, options) {
-                            assert.equal(body, true);
-                            assert.equal(options.statusCode, 200);
-                            done();
-                        });
-                });
-            });
-
-            describe('messages', function () {
-
-                it('should be transmitted from server to client', function (done) {
-                    d.mount(['means'], function (body, ctxt) {
-                        assert.deepEqual(ctxt.from, ['server', 'decides']);
-                        assert.equal(ctxt.body.him, 'or');
-                        assert.equal(ctxt.options.how, 'specifically');
-                        done();
-                    });
-                    serverSocket.emit('dual', {
-                        to: ['means']
-                        , from: ['decides']
-                        , body: {
-                            him: 'or'
-                        }
-                        ,options: {
-                            how: 'specifically'
-                        }
-                    });
-                });
-
-                it('should be transmitted from client to server', function (done) {
-                    serverSocket.on('dual', function (msg) {
-                        assert.deepEqual(msg.to, ['decides']);
-                        assert.deepEqual(msg.from, ['you', 'did']);
-                        assert.equal(msg.body.yeah, 'or');
-                        assert.equal(msg.options.how, 'specifically');
-                        done();
-                    });
-                    d.send(['server', 'decides'], ['you', 'did'], { yeah: 'or'}, { how: 'specifically' });
-                });
-
-            });
-
-            describe('error events', function () {
-
-                it('should be transmitted to server', function (done) {
-                    serverSocket.on('dual', function (ctxt) {
-                        assert.deepEqual(ctxt.to, ['error']);
-                        assert.deepEqual(ctxt.from, ['you', 'did']);
-                        assert.equal(ctxt.body.up, 'down');
-                        assert.equal(ctxt.options.how, 'specifically');
-                        done();
-                    });
-                    d.send(['error'], ['you', 'did'], { up: 'down'}, { how: 'specifically' });
-                });
-                
-            });
-
         });
 
         describe('redirect', function () {
@@ -362,13 +366,13 @@ describe('dual socket.io client', function () {
                     assert.equal(ctxt.options.gale, 'bedecher');
                     done();
                 });
-                serverSocket.emit('dual', {
+                serverSocket.send(JSON.stringify({
                     to: ['redirect']
                     , body: '/hector'
                     , options: {
                         gale: 'bedecher'
                     }
-                });
+                }));
             });
         });    
     });
