@@ -6,43 +6,43 @@ var _ = require('lodash');
 
 var socket = function () {
     
-    var sideA = new EventEmitter();
-    var sideB = new EventEmitter();
-    var sideAemit = _.bind(sideA.emit, sideA);
-    var sideBemit = _.bind(sideB.emit, sideB);
+    var serverSide = new EventEmitter();
+    var clientSide = new EventEmitter();
+    var serverSideemit = _.bind(serverSide.emit, serverSide);
+    var clientSideemit = _.bind(clientSide.emit, clientSide);
     var connected = true;
 
     var socketDisconnect = function () {
         if (connected) { 
             connected = false;
-            sideBemit.call(sideB, 'disconnect');
-            sideAemit.call(sideA, 'disconnect');
+            clientSideemit('close');
+            serverSideemit('close');
         }
     };
 
     var socketReconnect = function () {
         if (!connected) { 
             connected = true;
-            sideBemit.call(sideB, 'connect');
-            sideAemit.call(sideA, 'connect');
+            serverSideemit('connect');
+            clientSideemit('open');
         }
     };
 
     
-    _.extend(sideA, {
-        emit: function () {
+    _.extend(serverSide, {
+        send: function (msg) {
             if (connected) { 
-                sideBemit.apply(sideB, arguments);
+                clientSideemit('message', msg);
             }
         }
         , disconnect: socketDisconnect
         , reconnect: socketReconnect
     });
 
-    _.extend(sideB, {
-        emit: function () {
+    _.extend(clientSide, {
+        send: function (msg) {
             if (connected) {
-                sideAemit.apply(sideA, arguments);
+                serverSideemit('message', msg);
             }
         }
         , disconnect: socketDisconnect
@@ -50,19 +50,19 @@ var socket = function () {
     });
 
     return {
-        sideA: sideA
-        , sideB: sideB
+        serverSide: serverSide
+        , clientSide: clientSide
         , disconnect: function (quiet) {
             connected = false;
             if (!quiet) {
-                sideAemit('disconnect');
-                sideBemit('disconnect');
+                serverSideemit('disconnect');
+                clientSideemit('disconnect');
             }
         }
         , connect: function () {
             connected = true;
-            sideA.emit('connect');
-            sideB.emit('connect');
+            serverSide.emit('connect');
+            clientSide.emit('connect');
         }
     };
 };
@@ -73,20 +73,15 @@ module.exports = function (behavior) {
     var listenEmitter = new EventEmitter();
 
     return {
-        connect: function (url) {
+        client: function (url) {
             var s = socket();
-            s.sideA.url = url;
-            s.sideB.url = url;
+            s.serverSide.url = url;
+            s.clientSide.url = url;
             setTimeout(function () {
-                listenEmitter.emit('connect', s.sideA);
-                if (behavior) {
-                    behavior(s.sideA);
-                }
-                else {
-                    s.sideA.emit('connect');
-                }
+                listenEmitter.emit('connection', s.serverSide);
+                s.clientSide.emit('open');
             }, 0);
-            return s.sideB;
+            return s.clientSide;
         }
         , listen: function () {
             return listenEmitter;
