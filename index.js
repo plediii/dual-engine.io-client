@@ -7,18 +7,26 @@ var isFunction =  function (x) {
 };
 
 module.exports = function(Domain) {
-    Domain.prototype.engineio = function (io, point, url, auth) {
+    Domain.prototype.engineio = function (io, point, options) {
         var d = this;
-        if (isFunction(url)) {
-            auth = url;
-            url = false;
+        options = options || {};
+        var url = options.url;
+        var auth = options.auth;
+        var reconnect;
+        if (options.hasOwnProperty('reconnect')) {
+            reconnect = options.reconnect;
+        } else {
+            reconnect = 5;
         }
         var socket;
-        if (url) {
-            socket = io(url);
-        } else {
-            socket = io();
-        }
+        var connect = function () {
+            if (url) {
+                socket = io(url);
+            } else {
+                socket = io();
+            }
+            waitForIndex();
+        };
 
         var tryParse = function (raw) {
             try {
@@ -46,13 +54,19 @@ module.exports = function(Domain) {
             d.send({
                 to: ['disconnect'].concat(point).concat('**')
             });
-            waitForIndex(d, point, socket);
+            if (reconnect) {
+                setTimeout(function () {
+                    connect();
+                }, reconnect);
+            }
         };
 
         var makeUnavailable = function () {
             console.log(point.join('/') + ' is unavailable');
-            socket.removeListener('message', fromServer);
-            socket.removeListener('close', handleDisconnect);
+            if (socket) {
+                socket.removeListener('message', fromServer);
+                socket.removeListener('close', handleDisconnect);
+            }
             d.unmount(point);
             d.mount(point, function (body, ctxt) {
                 ctxt.return(false, { statusCode: 503 });
@@ -66,7 +80,6 @@ module.exports = function(Domain) {
                 ctxt.return(true, { statusCode: 200 });
             });
             socket.on('close', handleDisconnect);
-            console.log('mountin');
             socket.on('message', fromServer);
             d.mount(point.concat('::serverRoute'), function (body, ctxt) {
                 socket.send(JSON.stringify({
@@ -117,6 +130,6 @@ module.exports = function(Domain) {
         };
 
         makeUnavailable();
-        waitForIndex();
+        connect();
     };
 };

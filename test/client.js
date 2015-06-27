@@ -26,7 +26,10 @@ describe('dual socket.io client', function () {
                 assert.equal(socket.url, url);
                 done();
             });
-            d.engineio(ioclient, ['server'], url);
+            d.engineio(ioclient, ['server'], { 
+                url: url
+                , reconnect: false
+            });
         });
 
     });
@@ -39,18 +42,22 @@ describe('dual socket.io client', function () {
                 authEmitted = true;
                 socket.send('dual-auth');
             });
-            d.engineio(ioclient, ['server'], function () {
-                assert(authEmitted);
-                done();
-            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , auth: function () {
+                    assert(authEmitted);
+                    done();
+                }});
         });
 
         it('should *not* be called if the  server does not emit auth', function (done) {
             var authEmitted = false;
             io.listen().on('connection', function (socket) {});
-            d.engineio(ioclient, ['server'], function () {
-                done('no auth requested');
-            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , auth: function () {
+                    done('no auth requested');
+                }});
             done();
         });
 
@@ -63,9 +70,11 @@ describe('dual socket.io client', function () {
                 });
                 socket.send('dual-auth');
             });
-            d.engineio(ioclient, ['server'], function () {
-                return Promise.resolve('oompa');
-            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , auth: function () {
+                    return Promise.resolve('oompa');
+                }});
         });
 
         it('should allow synchronous response ', function (done) {
@@ -76,19 +85,23 @@ describe('dual socket.io client', function () {
                 });
                 socket.send('dual-auth');
             });
-            d.engineio(ioclient, ['server'], function () {
-                return 'oompa';
-            });
+            d.engineio(ioclient, ['server'], { 
+                reconnect: false
+                , auth: function () {
+                    return 'oompa';
+                }});
         });
 
         it('should transmit auth message from server ', function (done) {
             io.listen().on('connection', function (socket) {
                 socket.send('bighead');
             });
-            d.engineio(ioclient, ['server'], function (msg) {
-                assert.equal(msg, 'bighead');
-                done();
-            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , auth: function (msg) {
+                    assert.equal(msg, 'bighead');
+                    done();
+                }});
         });
 
     });
@@ -101,7 +114,9 @@ describe('dual socket.io client', function () {
                 serverSocket = socket;
                 done();
             });
-            d.engineio(ioclient, ['server']);
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+            });
         });
 
         describe('connection', function () {
@@ -307,52 +322,6 @@ describe('dual socket.io client', function () {
                     });
                 });
 
-                describe('then reconnect', function () {
-
-                    beforeEach(function (done) {
-                        d.waitFor(['connect', 'server'])
-                            .then(function () {
-                                done();
-                            });
-                        serverSocket.disconnect();
-                        serverSocket.reconnect();
-                        serverSocket.send(JSON.stringify({
-                            to: ['index']
-                        }));
-                    });
-
-                    it('should not double transmit messages', function (done) {
-                        var count = 0;
-                        d.mount(['means'], function (body, ctxt) {
-                            count++;
-                            if (count > 1) {
-                                done('multiple calls');
-                            } else {
-                                done();
-                            }
-                        });
-                        serverSocket.send(JSON.stringify({
-                            to: ['means']
-                        }));
-                    });
-
-                    describe('the disconnect again', function () {
-                        it('should not double transmit disconnect', function (done) {
-                            var count = 0;
-                            d.mount(['disconnect', 'server'], function (body, ctxt) {
-                                count++;
-                                if (count > 1) {
-                                    done('multiple calls');
-                                } else {
-                                    done();
-                                }
-                            });
-                            serverSocket.disconnect();
-                        });
-                    });
-
-                });
-
             });
 
         });
@@ -375,5 +344,60 @@ describe('dual socket.io client', function () {
                 }));
             });
         });    
+    });
+
+    describe('reconnecting', function () {
+
+        var serverSocket;
+        beforeEach(function (done) {
+            var firstConnection = true;
+            io.listen().on('connection', function (socket) {
+                serverSocket = socket;
+                serverSocket.send(JSON.stringify({
+                    to: ['index']
+                }));
+            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: 0.5
+            });
+            d.waitFor(['connect', 'server'])
+                .then(function () {
+                    serverSocket.disconnect();
+                    d.waitFor(['connect', 'server'])
+                        .then(function () {
+                            done();
+                        });
+                });
+        });
+
+        it('should not double transmit messages', function (done) {
+            var count = 0;
+            d.mount(['means'], function (body, ctxt) {
+                count++;
+                if (count > 1) {
+                    done('multiple calls');
+                } else {
+                    done();
+                }
+            });
+            serverSocket.send(JSON.stringify({
+                to: ['means']
+            }));
+        });
+
+        describe('the disconnect again', function () {
+            it('should not double transmit disconnect', function (done) {
+                var count = 0;
+                d.mount(['disconnect', 'server'], function (body, ctxt) {
+                    count++;
+                    if (count > 1) {
+                        done('multiple calls');
+                    } else {
+                        done();
+                    }
+                });
+                serverSocket.disconnect();
+            });
+        });
     });
 });
