@@ -27,7 +27,13 @@ module.exports = function(Domain) {
             }
             waitForIndex();
         };
-
+        var goReconnect = function () {
+            if (reconnect) {
+                setTimeout(function () {
+                    connect();
+                }, 1000 * reconnect);
+            }
+        };
         var tryParse = function (raw) {
             try {
                 return JSON.parse(raw);
@@ -54,11 +60,7 @@ module.exports = function(Domain) {
             d.send({
                 to: ['disconnect'].concat(point).concat('**')
             });
-            if (reconnect) {
-                setTimeout(function () {
-                    connect();
-                }, reconnect);
-            }
+            goReconnect();
         };
 
         var makeUnavailable = function () {
@@ -98,6 +100,14 @@ module.exports = function(Domain) {
         };
 
         var waitForIndex = function () {
+            var cleanup = function () {
+                socket.removeListener('message', indexListener);
+                socket.removeListener('close', goClose);
+            };
+            var goClose = function () {
+                cleanup();
+                goReconnect();
+            };
             var indexListener = function (raw) {
                 var msg = tryParse(raw);
                 if (!msg.to) {
@@ -114,7 +124,7 @@ module.exports = function(Domain) {
                     }
                 } else if (msg.to[0] === 'index'
                     && msg.to.length === 1) {
-                    socket.removeListener('message', indexListener);
+                    cleanup();
                     mount(d, point, socket);
                 } else if (msg.to[0] == 'redirect' 
                            && msg.to.length === 1) {
@@ -126,9 +136,9 @@ module.exports = function(Domain) {
                     });
                 }
             };
+            socket.on('close', goClose);
             socket.on('message', indexListener);
         };
-
         makeUnavailable();
         connect();
     };
