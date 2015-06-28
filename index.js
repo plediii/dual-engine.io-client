@@ -60,11 +60,7 @@ module.exports = function(Domain) {
             d.send({
                 to: ['disconnect'].concat(point).concat('**')
             });
-            if (reconnect) {
-                setTimeout(function () {
-                    connect();
-                }, reconnect);
-            }
+            goReconnect();
         };
 
         var makeUnavailable = function () {
