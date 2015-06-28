@@ -68,27 +68,45 @@ var socket = function () {
 };
 
 
-module.exports = function (behavior) {
+module.exports = function () {
     var sockets = [];
     var listenEmitter = new EventEmitter();
+    var offline = false;
+    var connectionAttempt;
 
     return {
         client: function (url) {
             var s = socket();
+            if (connectionAttempt) {
+                connectionAttempt(s);
+            }
             s.serverSide.url = url;
             s.clientSide.url = url;
             setTimeout(function () {
-                listenEmitter.emit('connection', s.serverSide);
-                s.clientSide.emit('open');
+                if (offline) {
+                    s.clientSide.emit('close');
+                } else {
+                    listenEmitter.emit('connection', s.serverSide);
+                    s.clientSide.emit('open');
+                }
             }, 0);
             return s.clientSide;
         }
         , listen: function () {
             return listenEmitter;
         }
+        , serverOffline: function () {
+            offline = true;
+        }
+        , serverOnline: function () {
+            offline = false;
+        }
         , socket: socket
         , sockets: function () {
             return sockets;
+        }
+        , onConnectionAttempt: function (cb) {
+            connectionAttempt = cb;
         }
     };
 };
