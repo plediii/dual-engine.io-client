@@ -236,7 +236,6 @@ describe('dual socket.io client', function () {
 
                 it('should be transmitted from server to client', function (done) {
                     d.mount(['means'], function (body, ctxt) {
-                        console.log('means received');
                         assert.deepEqual(ctxt.from, ['server', 'decides']);
                         assert.equal(ctxt.body.him, 'or');
                         assert.equal(ctxt.options.how, 'specifically');
@@ -327,7 +326,6 @@ describe('dual socket.io client', function () {
         });
 
         describe('redirect', function () {
-
             it('should emit a redirect event', function (done) {
                 d.mount(['redirect'], function (body, ctxt) {
                     assert(_.isEqual(ctxt.from, ['server']));
@@ -344,5 +342,39 @@ describe('dual socket.io client', function () {
                 }));
             });
         });    
+    });
+
+    describe('outgoing processing', function () {
+        var serverSocket;
+        var outgoing = function () {};
+        beforeEach(function (done) {
+            io.listen().on('connection', function (socket) {
+                serverSocket = socket;
+                serverSocket.send(JSON.stringify({
+                    to: ['index']
+                }));
+            });
+            d.mount(['connect', 'server'], function () {
+                done();
+            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , outgoing: function (ctxt) {
+                    outgoing(ctxt);
+                }
+            });
+        });
+
+        it('should be able to modify options', function (done) {
+            outgoing = function (ctxt) {
+                ctxt.options.disillusioned = 'senator';
+            };
+            serverSocket.on('message', function (raw) {
+                var msg = JSON.parse(raw);
+                assert.equal(msg.options.disillusioned, 'senator');
+                done();
+            });
+            d.send(['server', 'decides'], ['you', 'did'], { yeah: 'or'}, { how: 'specifically' });
+        });
     });
 });
