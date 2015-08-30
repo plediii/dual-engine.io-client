@@ -236,7 +236,6 @@ describe('dual socket.io client', function () {
 
                 it('should be transmitted from server to client', function (done) {
                     d.mount(['means'], function (body, ctxt) {
-                        console.log('means received');
                         assert.deepEqual(ctxt.from, ['server', 'decides']);
                         assert.equal(ctxt.body.him, 'or');
                         assert.equal(ctxt.options.how, 'specifically');
@@ -327,7 +326,6 @@ describe('dual socket.io client', function () {
         });
 
         describe('redirect', function () {
-
             it('should emit a redirect event', function (done) {
                 d.mount(['redirect'], function (body, ctxt) {
                     assert(_.isEqual(ctxt.from, ['server']));
