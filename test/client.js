@@ -345,4 +345,38 @@ describe('dual socket.io client', function () {
             });
         });    
     });
+
+    describe('outgoing processing', function () {
+        var serverSocket;
+        var outgoing = function () {};
+        beforeEach(function (done) {
+            io.listen().on('connection', function (socket) {
+                serverSocket = socket;
+                serverSocket.send(JSON.stringify({
+                    to: ['index']
+                }));
+            });
+            d.mount(['connect', 'server'], function () {
+                done();
+            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , outgoing: function (ctxt) {
+                    outgoing(ctxt);
+                }
+            });
+        });
+
+        it('should be able to modify options', function (done) {
+            outgoing = function (ctxt) {
+                ctxt.options.disillusioned = 'senator';
+            };
+            serverSocket.on('message', function (raw) {
+                var msg = JSON.parse(raw);
+                assert.equal(msg.options.disillusioned, 'senator');
+                done();
+            });
+            d.send(['server', 'decides'], ['you', 'did'], { yeah: 'or'}, { how: 'specifically' });
+        });
+    });
 });
