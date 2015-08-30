@@ -12,6 +12,7 @@ module.exports = function(Domain) {
         options = options || {};
         var url = options.url;
         var auth = options.auth;
+        var outgoing = options.outgoing;
         var reconnect;
         if (options.hasOwnProperty('reconnect')) {
             reconnect = options.reconnect;
@@ -75,6 +76,25 @@ module.exports = function(Domain) {
             });
         };
 
+        var serverSend = function (ctxt) {
+            socket.send(JSON.stringify({
+                to: ctxt.params.serverRoute
+                , from: ctxt.from
+                , body: ctxt.body
+                , options: ctxt.options
+            }));
+        };
+
+        var serverHost = function (body, ctxt) {
+            serverSend(ctxt);
+        };
+        if (outgoing) {
+            serverHost = function (body, ctxt) {
+                outgoing(ctxt);
+                serverSend(ctxt);
+            };
+        }
+
         var mount = function () {
             console.log(point.join('/') + ' is available');
             d.unmount(point);
@@ -83,14 +103,7 @@ module.exports = function(Domain) {
             });
             socket.on('close', handleDisconnect);
             socket.on('message', fromServer);
-            d.mount(point.concat('::serverRoute'), function (body, ctxt) {
-                socket.send(JSON.stringify({
-                    to: ctxt.params.serverRoute
-                    , from: ctxt.from
-                    , body: ctxt.body
-                    , options: ctxt.options
-                }));
-            });
+            d.mount(point.concat('::serverRoute'), serverHost);
             d.mount(['error'], function (body, ctxt) {
                 socket.send(JSON.stringify(ctxt));
             });
