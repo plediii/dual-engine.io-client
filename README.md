@@ -1,4 +1,4 @@
-# dual-engine.io-client [![Build Status](http://jenkins.plediii.net:8080/buildStatus/icon?job=dual-engine.io-client master)](http://jenkins.plediii.net:8080/job/dual-engine.io-client%20master/)
+# dual-engine.io-client [![Build Status](https://travis-ci.org/plediii/dual-engine.io-client.svg)](https://travis-ci.org/plediii/dual-engine.io-client)
 
 Allow a dualapi domain in a browser to communicate with a dualapi
 domain behind an engine.io server.  The server side transport and example use is at [dual-engine.io](https://github.com/plediii/dual-engine.io).
