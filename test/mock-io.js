@@ -35,7 +35,7 @@ var socket = function () {
                 clientSideemit('message', msg);
             }
         }
-        , disconnect: socketDisconnect
+        , close: socketDisconnect
         , reconnect: socketReconnect
     });
 
@@ -45,14 +45,14 @@ var socket = function () {
                 serverSideemit('message', msg);
             }
         }
-        , disconnect: socketDisconnect
+        , close: socketDisconnect
         , reconnect: socketReconnect
     });
 
     return {
         serverSide: serverSide
         , clientSide: clientSide
-        , disconnect: function (quiet) {
+        , close: function (quiet) {
             connected = false;
             if (!quiet) {
                 serverSideemit('disconnect');

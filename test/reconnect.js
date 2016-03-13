@@ -33,7 +33,7 @@ describe('dual socket.io client reconnecting', function () {
             });
             d.waitFor(['connect', 'server'])
                 .then(function () {
-                    serverSocket.disconnect();
+                    serverSocket.close();
                     d.waitFor(['connect', 'server'])
                         .then(function () {
                             done();
@@ -67,7 +67,7 @@ describe('dual socket.io client reconnecting', function () {
                         done();
                     }
                 });
-                serverSocket.disconnect();
+                serverSocket.close();
             });
         });
     });
@@ -126,8 +126,38 @@ describe('dual socket.io client reconnecting', function () {
                         done();
                     }
                 });
-                serverSocket.disconnect();
+                serverSocket.close();
             });
+        });
+    });
+
+    describe('when server redirects', function () {
+
+        it('should not reconnect', function (done) {
+            var connected = false;
+            io.listen().on('connection', function (socket) {
+                assert(!connected, 'reconnected after redirect');
+                connected = true;
+                socket.on('message', function (msg) {
+                    socket.send(JSON.stringify({
+                        to: ['redirect']
+                        , body: '/hector'
+                        , options: {
+                            gale: 'bedecher'
+                        }
+                    }));
+                    socket.close();
+                    setTimeout(function () {
+                        done();
+                    }, 1500);
+                });
+                socket.send('dual-auth');
+            });
+            d.engineio(ioclient, ['server'], {
+                reconnect: true
+                , auth: function () {
+                    return 'oompa';
+                }});
         });
     });
 });
