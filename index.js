@@ -141,6 +141,7 @@ module.exports = function(Domain) {
                     mount(d, point, socket);
                 } else if (msg.to[0] == 'redirect' 
                            && msg.to.length === 1) {
+                    reconnect = false;
                     d.send({
                         to: ['redirect']
                         , from: point
