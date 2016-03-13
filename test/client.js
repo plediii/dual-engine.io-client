@@ -290,7 +290,7 @@ describe('dual socket.io client', function () {
                         .then(function () {
                             done();
                         });
-                    serverSocket.disconnect();
+                    serverSocket.close();
                 });
 
                 it('should be emitted to disconnect/server/**', function (done) {
@@ -298,12 +298,12 @@ describe('dual socket.io client', function () {
                         .then(function () {
                             done();
                         });
-                    serverSocket.disconnect();
+                    serverSocket.close();
                 });
 
                 describe('server', function () {
                     it('should respond unavailable', function (done) {
-                        serverSocket.disconnect();
+                        serverSocket.close();
                         d.request(['server'])
                             .spread(function (body, options) {
                                 assert.equal(options.statusCode, 503);
@@ -312,7 +312,7 @@ describe('dual socket.io client', function () {
                     });
 
                     it('should respond unavailable on subroutes', function (done) {
-                        serverSocket.disconnect();
+                        serverSocket.close();
                         d.request(['server', 'ferrets'])
                             .spread(function (body, options) {
                                 assert.equal(options.statusCode, 503);

@@ -33,7 +33,7 @@ describe('dual socket.io client reconnecting', function () {
             });
             d.waitFor(['connect', 'server'])
                 .then(function () {
-                    serverSocket.disconnect();
+                    serverSocket.close();
                     d.waitFor(['connect', 'server'])
                         .then(function () {
                             done();
@@ -67,7 +67,7 @@ describe('dual socket.io client reconnecting', function () {
                         done();
                     }
                 });
-                serverSocket.disconnect();
+                serverSocket.close();
             });
         });
     });
@@ -126,7 +126,7 @@ describe('dual socket.io client reconnecting', function () {
                         done();
                     }
                 });
-                serverSocket.disconnect();
+                serverSocket.close();
             });
         });
     });
