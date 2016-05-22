@@ -155,5 +155,12 @@ module.exports = function(Domain) {
         };
         makeUnavailable();
         connect();
+        return {
+            disconnect: function () {
+                reconnect = false;
+                socket.close();
+                socket = null;
+            }
+        };
     };
 };
