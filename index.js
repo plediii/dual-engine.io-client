@@ -64,6 +64,10 @@ module.exports = function(Domain) {
             goReconnect();
         };
 
+        var errorHandler = function (body, ctxt) {
+            socket.send(JSON.stringify(ctxt));
+        };
+
         var makeUnavailable = function () {
             console.log(point.join('/') + ' is unavailable');
             if (socket) {
@@ -71,6 +75,7 @@ module.exports = function(Domain) {
                 socket.removeListener('close', handleDisconnect);
             }
             d.unmount(point);
+            d.unmount(['error'], errorHandler);
             d.mount(point, function (body, ctxt) {
                 ctxt.return(false, { statusCode: 503 });
             });
@@ -104,9 +109,7 @@ module.exports = function(Domain) {
             socket.on('close', handleDisconnect);
             socket.on('message', fromServer);
             d.mount(point.concat('::serverRoute'), serverHost);
-            d.mount(['error'], function (body, ctxt) {
-                socket.send(JSON.stringify(ctxt));
-            });
+            d.mount(['error'], errorHandler);
             d.send({
                 to: ['connect'].concat(point)
             });

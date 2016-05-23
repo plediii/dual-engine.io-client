@@ -63,6 +63,32 @@ describe('dual socket.io client disconnecting', function () {
             dio.disconnect();
             done();
         });
+
+        it('should not leave a mounted listener', function () {
+            assert.notEqual(0, d.listeners(['server']).length);
+            assert.notEqual(0, d.listeners(['server', '**']).length);
+            dio.disconnect();
+            d.waitFor(['disconnect', 'server'])
+                .then(function () {
+                    assert.equal(0, d.listeners(['server']).length);
+                    assert.equal(0, d.listeners(['server', '**']).length);
+                });
+        });
+
+        it('should not leave error listener', function () {
+            console.log('sending before disconnect');
+            d.send(['error']);
+            console.log('sent');
+            d.waitFor(['disconnect', 'server'])
+                .then(function () {
+                    // this will cause an error due to a listener
+                    // leak holding the old socket, although I don't have a straightforward
+                    // way to observe it
+                    console.log('sending after disconnect');
+                    d.send(['error']);
+                });
+            dio.disconnect();
+        });
     });
 
     describe('when server is offline', function () {
