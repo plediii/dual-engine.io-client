@@ -104,6 +104,36 @@ describe('dual socket.io client', function () {
                 }});
         });
 
+        it('should not throw exception if client disconnects during auth', function (done) {
+            io.listen().on('connection', function (socket) {
+                socket.send('bighead');
+            });
+            var dio = d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , auth: function (msg) {
+                    dio.disconnect();
+                    done();
+                }});
+        });
+
+        it('should not throw exception if client disconnects during redirect', function (done) {
+            io.listen().on('connection', function (socket) {
+                socket.on('message', function () {
+                    socket.send(JSON.stringify({ to: ['redirect'] }));
+                });
+                socket.send('bighead');
+            });
+            d.mount(['redirect'], function () {
+                dio.disconnect();
+                done();
+            });
+            var dio = d.engineio(ioclient, ['server'], {
+                reconnect: false
+                , auth: function (msg) {
+                    return 'monster';
+                }
+            });
+        });
     });
 
     describe('authenticated', function () {
