@@ -117,8 +117,10 @@ module.exports = function(Domain) {
 
         var waitForIndex = function () {
             var cleanup = function () {
-                socket.removeListener('message', indexListener);
-                socket.removeListener('close', goClose);
+                if (socket) {
+                    socket.removeListener('message', indexListener);
+                    socket.removeListener('close', goClose);
+                }
             };
             var goClose = function () {
                 cleanup();
@@ -129,7 +131,9 @@ module.exports = function(Domain) {
                 if (!msg.to) {
                     if (auth) {
                         var goAuth = function (response) {
-                            socket.send(response);
+                            if (socket) {
+                                socket.send(response);
+                            }
                         };
                         var async = auth(raw);
                         if (async && isFunction(async.then)) {
