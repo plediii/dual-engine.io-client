@@ -15,8 +15,12 @@ var socket = function () {
     var socketDisconnect = function () {
         if (connected) { 
             connected = false;
-            clientSideemit('close');
-            serverSideemit('close');
+            process.nextTick(function () {
+                clientSideemit('close');
+            });
+            process.nextTick(function () {
+                serverSideemit('close');
+            });
         }
     };
 
