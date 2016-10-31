@@ -32,6 +32,21 @@ describe('dual socket.io client', function () {
             });
         });
 
+        it('should connect to dynamic url', function (done) {
+            var resolvedUrl = 'http://boondocks.com';
+            var url = function () {
+                return Promise.resolve(resolvedUrl);
+            };
+            io.listen().on('connection', function (socket) {
+                assert.equal(socket.url, resolvedUrl);
+                done();
+            });
+            d.engineio(ioclient, ['server'], { 
+                url: url
+                , reconnect: false
+            });
+        });
+
     });
 
     describe('authentication', function () {
