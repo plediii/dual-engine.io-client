@@ -6,7 +6,7 @@ var isFunction =  function (x) {
     return Object.prototype.toString.call(x) == '[object Function]';
 };
 
-module.exports = function(Domain) {
+module.exports = function(Domain, libs) {
     Domain.prototype.engineio = function (io, point, options) {
         var d = this;
         options = options || {};
@@ -21,12 +21,20 @@ module.exports = function(Domain) {
         }
         var socket;
         var connect = function () {
-            if (url) {
-                socket = io(url);
+            if (url && isFunction(url)) {
+                libs.Promise.resolve(url())
+                    .then(function (resolvedUrl) {
+                        socket = io(resolvedUrl);
+                        waitForIndex();
+                    });
             } else {
-                socket = io();
+                if (url) {
+                    socket = io(url);
+                } else {
+                    socket = io();
+                }
+                waitForIndex();
             }
-            waitForIndex();
         };
         var goReconnect = function () {
             if (reconnect) {
